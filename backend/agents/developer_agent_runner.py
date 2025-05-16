@@ -1,9 +1,19 @@
 from .developer_agent import DeveloperAgent
 from backend.utils.progress_tracker import log_progress_step
+from backend.langgraph.memory.hybrid_memory import memory_manager
 
 def run_developer_agent(tasks: list[str]) -> dict:
-    developer = DeveloperAgent()
-    log_progress_step("DeveloperAgent", "Starting development")
-    code_files = developer.execute(tasks)
-    log_progress_step("DeveloperAgent", "Code generated", list(code_files.keys()))
-    return code_files
+    log_progress_step("DeveloperAgent", "Developer Agent is executing")
+    dev = DeveloperAgent()
+    code = dev.execute(tasks)
+    memory_manager.save("last_dev_output", code)
+    return code
+
+def fix_failed_tasks_from_tests() -> dict:
+    feedback = memory_manager.load("TesterAgent_last_test_issues")
+    if not feedback:
+        log_progress_step("DeveloperAgent", "No issues to fix from tests.")
+        return {}
+
+    log_progress_step("DeveloperAgent", f"Fixing issues from test feedback: {feedback}")
+    return run_developer_agent(feedback)

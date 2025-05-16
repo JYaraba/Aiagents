@@ -1,4 +1,4 @@
-from .tester_agent import TesterAgent
+from backend.agents.tester_agent import TesterAgent
 from backend.utils.progress_tracker import log_progress_step
 
 def run_tester_agent(prompt: str) -> list[str]:
