@@ -1,19 +1,19 @@
 from .base_agent import BaseAgent
-from backend.utils.progress_tracker import track_progress
+from backend.utils.progress_tracker import track_progress_step
 from backend.utils.file_writer import write_code_to_project_structure, zip_output_folder
 from openai import OpenAI
 from backend.config import settings
 from dotenv import load_dotenv
 import os
-load_dotenv()
 
+load_dotenv()
 
 class DeveloperAgent(BaseAgent):
     def __init__(self):
         super().__init__(name="DeveloperAgent", role="Code Generator")
         self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-    @track_progress("Developer Agent is executing")
+    @track_progress_step("DeveloperAgent", "Developer Agent is executing")
     def execute(self, task_list: list[str]) -> dict:
         prompt = "\n".join(task_list)
         dev_prompt = (
