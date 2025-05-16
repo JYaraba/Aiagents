@@ -1,37 +1,36 @@
 import os
+import json
 import faiss
-import pickle
 import numpy as np
-from pathlib import Path
-from typing import List
 from sentence_transformers import SentenceTransformer
 
 class FAISSMemory:
     def __init__(self, index_path: str, metadata_path: str):
-        self.index_path = Path(index_path)
-        self.metadata_path = Path(metadata_path)
+        self.index_path = index_path
+        self.metadata_path = metadata_path
         self.model = SentenceTransformer("all-MiniLM-L6-v2")
 
-        if self.index_path.exists() and self.metadata_path.exists():
-            self.index = faiss.read_index(str(self.index_path))
-            with open(self.metadata_path, "rb") as f:
-                self.metadata = pickle.load(f)
+        if os.path.exists(index_path):
+            self.index = faiss.read_index(index_path)
+            with open(metadata_path, "r") as f:
+                self.metadata = json.load(f)
         else:
-            self.index = faiss.IndexFlatL2(384)  # Vector size for MiniLM
-            self.metadata = []
+            self.index = faiss.IndexFlatL2(384)
+            self.metadata = {}
 
-    def save(self):
-        faiss.write_index(self.index, str(self.index_path))
-        with open(self.metadata_path, "wb") as f:
-            pickle.dump(self.metadata, f)
-
-    def add(self, text: str, metadata: dict):
-        embedding = self.model.encode([text])
+    def save(self, key: str, data: str):
+        embedding = self.model.encode([data])
         self.index.add(np.array(embedding).astype("float32"))
-        self.metadata.append(metadata)
-        self.save()
+        self.metadata[str(len(self.metadata))] = {"key": key, "data": data}
+        self._persist()
 
-    def search(self, query: str, top_k: int = 5) -> List[dict]:
-        embedding = self.model.encode([query])
-        D, I = self.index.search(np.array(embedding).astype("float32"), top_k)
-        return [self.metadata[i] for i in I[0] if i < len(self.metadata)]
+    def load(self, key: str):
+        for record in self.metadata.values():
+            if record["key"] == key:
+                return record["data"]
+        return None
+
+    def _persist(self):
+        faiss.write_index(self.index, self.index_path)
+        with open(self.metadata_path, "w") as f:
+            json.dump(self.metadata, f, indent=2)
