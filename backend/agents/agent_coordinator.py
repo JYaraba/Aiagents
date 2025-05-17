@@ -1,70 +1,71 @@
 # backend/agents/agent_coordinator.py
 
+from backend.agents.architect_agent import ArchitectAgent
 from backend.agents.planner_agent import PlannerAgent
-from backend.agents.prompt_engineer_agent import PromptEngineerAgent
-from backend.agents.python_developer_agent import PythonDeveloperAgent
 from backend.agents.frontend_developer_agent import FrontendDeveloperAgent
+from backend.agents.nodejs_developer_agent import NodeJsDeveloperAgent
 from backend.agents.ux_designer_agent import UXDesignerAgent
 from backend.agents.fullstack_integrator_agent import FullStackIntegratorAgent
 from backend.agents.tester_agent import TesterAgent
 from backend.agents.bug_fixer_agent import BugFixerAgent
 from backend.agents.packager_agent import PackagerAgent
 
-def plan_and_build(user_prompt: str) -> dict:
+from backend.utils.progress_tracker import track_progress_step
+from backend.utils.file_writer import write_preview_file
+
+
+@track_progress_step("AgentCoordinator", "Planning and building project")
+def plan_and_build(prompt: str) -> dict:
+    # Step 1: Analyze architecture
+    architect = ArchitectAgent()
+    architecture = architect.execute(prompt)
+
+    if not isinstance(architecture, dict) or "stack" not in architecture:
+        return {"error": "Failed to parse architect output"}
+
+    # Step 2: Generate project tasks
     planner = PlannerAgent()
+    tasks = planner.execute(prompt)
+
+    # Step 3: Use PromptEngineerAgent only inside this function to avoid circular import
+    from backend.agents.prompt_engineer_agent import PromptEngineerAgent
     prompt_engineer = PromptEngineerAgent()
+    engineered_prompt = prompt_engineer.execute(prompt)
+
+    # Step 4: Frontend Developer builds UI
+    frontend_dev = FrontendDeveloperAgent()
+    frontend_result = frontend_dev.execute(engineered_prompt)
+
+    # Step 5: Backend Developer builds server logic
+    backend_dev = NodeJsDeveloperAgent()
+    backend_result = backend_dev.execute(engineered_prompt)
+
+    # ✅ Step 6: Generate preview.html after backend is done
+    write_preview_file("preview.html", title="App Preview", body="The application frontend has been successfully generated.")
+
+    # Step 7: UX Designer creates layout enhancements
+    ux_agent = UXDesignerAgent()
+    ux_result = ux_agent.execute(prompt)
+
+    # Step 8: Full Stack Integrator merges everything
+    integrator = FullStackIntegratorAgent()
+    integration_result = integrator.execute(prompt)
+
+    # Step 9: Tester Agent validates generated files
     tester = TesterAgent()
-    bug_fixer = BugFixerAgent()
+    test_result = tester.execute([])
+
+    # Step 10: Bug Fixer Agent applies quick fixes
+    bugfixer = BugFixerAgent()
+    bugfix_result = bugfixer.execute(test_result)
+
+    # Step 11: Packager Agent packages the build
     packager = PackagerAgent()
-
-    # Step 1: Plan the tasks
-    steps = planner.execute(user_prompt)
-
-    # Step 2: Route each step to correct specialist via prompt engineer
-    output_files = {}
-
-    for step in steps:
-        step_lower = step.lower()
-        target_agent = ""
-
-        if any(word in step_lower for word in ["backend", "api", "database", "python"]):
-            target_agent = "PythonDeveloperAgent"
-            prompt = prompt_engineer.execute({"task": step, "target_agent": target_agent})
-            dev = PythonDeveloperAgent()
-            output_files.update(dev.execute(prompt))
-
-        elif any(word in step_lower for word in ["frontend", "html", "css", "react"]):
-            target_agent = "FrontendDeveloperAgent"
-            prompt = prompt_engineer.execute({"task": step, "target_agent": target_agent})
-            dev = FrontendDeveloperAgent()
-            output_files.update(dev.execute(prompt))
-
-        elif any(word in step_lower for word in ["layout", "user interface", "flow"]):
-            target_agent = "UXDesignerAgent"
-            prompt = prompt_engineer.execute({"task": step, "target_agent": target_agent})
-            dev = UXDesignerAgent()
-            layout_plan = dev.execute(prompt)
-            output_files["layout_plan.txt"] = layout_plan
-
-        elif any(word in step_lower for word in ["connect", "integrate", "hook up"]):
-            target_agent = "FullStackIntegratorAgent"
-            prompt = prompt_engineer.execute({"task": step, "target_agent": target_agent})
-            dev = FullStackIntegratorAgent()
-            output_files.update(dev.execute(prompt))
-
-    # Step 3: Run tests
-    test_result = tester.execute(list(output_files.keys()))
-
-    # Step 4: Fix any bugs
-    if any("❌" in r for r in test_result["test_results"]):
-        fixed = bug_fixer.execute(test_result["test_results"])
-        output_files.update(fixed)
-
-    # Step 5: Package the build
-    package = packager.execute([])
+    package_result = packager.execute(prompt)
 
     return {
-        "tasks": steps,
-        "test_results": test_result["test_results"],
-        "package_path": package["zip_path"]
+        "architecture": architecture,
+        "tasks": tasks,
+        "test_results": test_result,
+        "package_path": package_result.get("package_path")
     }

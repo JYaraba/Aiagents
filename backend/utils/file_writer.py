@@ -37,6 +37,17 @@ def generate_executable_if_possible(main_py_path: str):
     else:
         print("[Executable Generator] 'main.py' not found. Skipping .exe generation.")
 
+def write_preview_file(html_content: str, output_path: str = "output/preview.html"):
+    """
+    Writes the generated HTML preview content to a file.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(output_path, "w") as f:
+        f.write(html_content)
+
+
 def load_python_files(folder_path: str) -> dict:
     files = {}
     for filename in os.listdir(folder_path):
