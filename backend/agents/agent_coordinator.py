@@ -1,35 +1,70 @@
-from backend.agents.planner_agent_runner import run_planner_agent
-from backend.agents.developer_agent_runner import run_developer_agent, fix_failed_tasks_from_tests
-from backend.agents.tester_agent_runner import run_tester_agent
-from backend.utils.preview_renderer import render_preview
-from backend.utils.file_writer import write_code_to_project_structure, zip_output_folder, generate_executable_if_possible
-from backend.utils.progress_tracker import log_progress_step
+# backend/agents/agent_coordinator.py
 
-def plan_and_build(prompt: str):
-    log_progress_step("PlannerAgent", "Starting planning")
-    steps = run_planner_agent(prompt)
+from backend.agents.planner_agent import PlannerAgent
+from backend.agents.prompt_engineer_agent import PromptEngineerAgent
+from backend.agents.python_developer_agent import PythonDeveloperAgent
+from backend.agents.frontend_developer_agent import FrontendDeveloperAgent
+from backend.agents.ux_designer_agent import UXDesignerAgent
+from backend.agents.fullstack_integrator_agent import FullStackIntegratorAgent
+from backend.agents.tester_agent import TesterAgent
+from backend.agents.bug_fixer_agent import BugFixerAgent
+from backend.agents.packager_agent import PackagerAgent
 
-    log_progress_step("DeveloperAgent", "Executing development tasks")
-    code_files = run_developer_agent(steps)
-    output_path = "output_projects"
-    write_code_to_project_structure(code_files, output_path)
+def plan_and_build(user_prompt: str) -> dict:
+    planner = PlannerAgent()
+    prompt_engineer = PromptEngineerAgent()
+    tester = TesterAgent()
+    bug_fixer = BugFixerAgent()
+    packager = PackagerAgent()
 
-    log_progress_step("DeveloperAgent", "Rendering preview")
-    preview_html = render_preview(code_files, output_path)
+    # Step 1: Plan the tasks
+    steps = planner.execute(user_prompt)
 
-    log_progress_step("TesterAgent", "Running tests")
-    test_issues = run_tester_agent(prompt)
+    # Step 2: Route each step to correct specialist via prompt engineer
+    output_files = {}
 
-    if test_issues:
-        log_progress_step("DeveloperAgent", "Reworking based on test feedback")
-        updated_files = fix_failed_tasks_from_tests()
-        write_code_to_project_structure(updated_files, output_path)
+    for step in steps:
+        step_lower = step.lower()
+        target_agent = ""
 
-    log_progress_step("DeveloperAgent", "Packaging build")
-    generate_executable_if_possible(output_path)
-    zip_output_folder(output_path, "output.zip")
+        if any(word in step_lower for word in ["backend", "api", "database", "python"]):
+            target_agent = "PythonDeveloperAgent"
+            prompt = prompt_engineer.execute({"task": step, "target_agent": target_agent})
+            dev = PythonDeveloperAgent()
+            output_files.update(dev.execute(prompt))
+
+        elif any(word in step_lower for word in ["frontend", "html", "css", "react"]):
+            target_agent = "FrontendDeveloperAgent"
+            prompt = prompt_engineer.execute({"task": step, "target_agent": target_agent})
+            dev = FrontendDeveloperAgent()
+            output_files.update(dev.execute(prompt))
+
+        elif any(word in step_lower for word in ["layout", "user interface", "flow"]):
+            target_agent = "UXDesignerAgent"
+            prompt = prompt_engineer.execute({"task": step, "target_agent": target_agent})
+            dev = UXDesignerAgent()
+            layout_plan = dev.execute(prompt)
+            output_files["layout_plan.txt"] = layout_plan
+
+        elif any(word in step_lower for word in ["connect", "integrate", "hook up"]):
+            target_agent = "FullStackIntegratorAgent"
+            prompt = prompt_engineer.execute({"task": step, "target_agent": target_agent})
+            dev = FullStackIntegratorAgent()
+            output_files.update(dev.execute(prompt))
+
+    # Step 3: Run tests
+    test_result = tester.execute(list(output_files.keys()))
+
+    # Step 4: Fix any bugs
+    if any("❌" in r for r in test_result["test_results"]):
+        fixed = bug_fixer.execute(test_result["test_results"])
+        output_files.update(fixed)
+
+    # Step 5: Package the build
+    package = packager.execute([])
 
     return {
-        "message": "Code generated and tested",
-        "preview": preview_html
+        "tasks": steps,
+        "test_results": test_result["test_results"],
+        "package_path": package["zip_path"]
     }
