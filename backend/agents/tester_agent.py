@@ -9,7 +9,6 @@ class TesterAgent(BaseAgent):
     def __init__(self):
         super().__init__(name="TesterAgent", role="Functionality Validator")
 
-    @log_progress_step("TesterAgent", "Tester Agent is executing")
     def execute(self, task_list: List[str]) -> dict:
         log_progress_step(self.name, "Tester Agent is executing")
 

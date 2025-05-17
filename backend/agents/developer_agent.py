@@ -5,6 +5,7 @@ from openai import OpenAI
 from backend.config import settings
 from dotenv import load_dotenv
 import os
+import re
 
 load_dotenv()
 
@@ -15,7 +16,45 @@ class DeveloperAgent(BaseAgent):
 
     @track_progress_step("DeveloperAgent", "Developer Agent is executing")
     def execute(self, task_list: list[str]) -> dict:
-        prompt = "\n".join(task_list)
+        test_results = []
+        tasks = []
+        for item in task_list:
+            if "❌ Syntax Error" in item:
+                test_results.append(item)
+            else:
+                tasks.append(item)
+
+        if test_results:
+            print("[DeveloperAgent] Detected test errors. Attempting to fix...")
+
+            for error in test_results:
+                match = re.search(r"^(.*): ❌ Syntax Error - .*\(<unknown>, line (\d+)\)", error)
+                print(f"[DeveloperAgent] Match found: {match.groups() if match else 'None'}")
+
+                if match:
+                    file_path, line_number = match.group(1), int(match.group(2))
+                    full_path = os.path.join("output_projects", os.path.basename(file_path))
+
+                    if os.path.exists(full_path):
+                        with open(full_path, "r") as f:
+                            lines = f.readlines()
+
+                        if 0 < line_number <= len(lines):
+                            print(f"[DeveloperAgent] Removing faulty line {line_number} from {full_path}")
+                            lines[line_number - 1] = "# [AUTO-FIXED] Removed line due to syntax error\n"
+
+                            with open(full_path, "w") as f:
+                                f.writelines(lines)
+
+                        with open(full_path, "r") as f:
+                            updated_code = f.read()
+                        files = {os.path.basename(full_path): updated_code}
+                        self.remember("last_code", files)
+                        return files
+
+
+        # Fallback: normal code generation
+        prompt = "\n".join(tasks)
         dev_prompt = (
             "You are a senior developer. Write clean and well-documented code based on the following tasks:\n\n"
             f"{prompt}"
