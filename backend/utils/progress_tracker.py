@@ -1,17 +1,14 @@
 import datetime
 import functools
 import inspect
+from functools import wraps
+from datetime import datetime
+from typing import Any, Optional
 
-def log_progress_step(agent: str, step: str, data: object = None):
-    """
-    Logs progress of a specific agent step with timestamp and optional data.
-    """
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[Progress] {timestamp}: {agent}: {step}", end="")
-    if data:
-        print(f" | Data: {data}")
-    else:
-        print("")
+def log_progress_step(agent_name: str, message: str, extra: Optional[Any] = None):
+    print(f"[{agent_name}] {message}")
+    if extra is not None:
+        print(f"[{agent_name} DATA] {extra}")
 
 def track_progress_step(agent: str, progress: str):
     """
@@ -26,3 +23,5 @@ def track_progress_step(agent: str, progress: str):
             return result
         return wrapper
     return decorator
+
+

@@ -1,9 +1,13 @@
-from .tester_agent import TesterAgent
-from backend.utils.progress_tracker import log_progress_step
+import pytest
+from agents.planner_agent import PlannerAgent
+from backend.config import settings
 
-def run_tester_agent(prompt: str) -> list[str]:
-    log_progress_step("TesterAgent", "Starting tests")
-    tester = TesterAgent()
-    result = tester.execute([prompt])
-    log_progress_step("TesterAgent", f"Test results: {result['summary']}")
-    return result["issues"]
+@pytest.mark.skipif(not settings.OPENAI_API_KEY, reason="No OpenAI key set")
+def test_planner_agent_execution():
+    agent = PlannerAgent()
+    prompt = "Build a simple expense tracking app"
+    tasks = agent.execute(prompt)
+
+    assert isinstance(tasks, list)
+    assert len(tasks) >= 3
+    assert any("UI" in task or "interface" in task.lower() for task in tasks)

@@ -1,48 +1,27 @@
-from backend.agents.base_agent import BaseAgent
+from .base_agent import BaseAgent
 from backend.utils.progress_tracker import log_progress_step
-import os
+from backend.utils.file_writer import load_python_files
+from typing import List
+import ast
+
 
 class TesterAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="TesterAgent", role="Quality Assurance")
+        super().__init__(name="TesterAgent", role="Functionality Validator")
 
     @log_progress_step("TesterAgent", "Tester Agent is executing")
-    def execute(self, task_list: list[str]) -> dict:
-        issues = []
-        test_summary = {}
+    def execute(self, task_list: List[str]) -> dict:
+        log_progress_step(self.name, "Tester Agent is executing")
 
-        # Check if main.py exists
-        file_path = "output_projects/main.py"
-        if not os.path.exists(file_path):
-            issues.append("main.py not found in output_projects folder.")
-        else:
+        test_results = []
+        files_to_test = load_python_files("output_projects")
+
+        for file_path, content in files_to_test.items():
             try:
-                with open(file_path, "r") as f:
-                    code = f.read()
-                    compile(code, file_path, "exec")
-                    test_summary["main.py"] = "Syntax OK"
+                ast.parse(content)
+                test_results.append(f"{file_path}: ✅ Syntax OK")
             except SyntaxError as e:
-                issues.append(f"Syntax error in main.py: {str(e)}")
-            except Exception as e:
-                issues.append(f"Unexpected error when reading main.py: {str(e)}")
+                test_results.append(f"{file_path}: ❌ Syntax Error - {e}")
 
-        # Optional: Check for empty preview.html
-        preview_path = "output_projects/preview.html"
-        if os.path.exists(preview_path):
-            with open(preview_path, "r") as f:
-                html = f.read().strip()
-                if not html:
-                    issues.append("preview.html exists but is empty.")
-                else:
-                    test_summary["preview.html"] = "Found with content"
-        else:
-            issues.append("preview.html not found.")
-
-        # Save test results to memory
-        self.remember("test_results", {"summary": test_summary, "issues": issues})
-
-        return {
-            "status": "pass" if not issues else "fail",
-            "issues": issues,
-            "summary": test_summary
-        }
+        self.remember("test_results", test_results)
+        return {"test_results": test_results}

@@ -36,3 +36,18 @@ def generate_executable_if_possible(main_py_path: str):
         print("[Executable Generator] 'main.py' found, preparing for packaging...")
     else:
         print("[Executable Generator] 'main.py' not found. Skipping .exe generation.")
+
+def load_python_files(base_folder: str) -> dict:
+    """
+    Recursively load all .py files under the base_folder
+    and return a dictionary of {file_path: content}.
+    """
+    python_files = {}
+    base_path = Path(base_folder)
+
+    for py_file in base_path.rglob("*.py"):
+        with open(py_file, "r", encoding="utf-8") as f:
+            content = f.read()
+            python_files[str(py_file)] = content
+
+    return python_files
