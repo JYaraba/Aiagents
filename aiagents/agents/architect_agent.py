@@ -1,5 +1,5 @@
-from aiagents.base.base_agent import BaseAgent
-from aiagents.utils.progress_logger import log_step
+from aiagents.utils.progress_tracker import log_progress_step  # ✅ Correct and working decorator
+from aiagents.agents.base_agent import BaseAgent  # ✅ Update path based on your current structure
 
 
 class ArchitectAgent(BaseAgent):
@@ -10,9 +10,9 @@ class ArchitectAgent(BaseAgent):
             goal="Analyze the prompt and decide on the tech stack, folder structure, required agents, and base architecture plan."
         )
 
-    @log_step("ArchitectAgent", "Analyzing app prompt and selecting tech stack")
+    @log_progress_step("ArchitectAgent", "Analyzing app prompt and selecting tech stack")
     def execute(self, prompt: str) -> dict:
-        # For now, simulate architecture generation. Later, this will use LLM output.
+        # Simulated architecture output
         architecture = {
             "stack": {
                 "frontend": "React.js",
