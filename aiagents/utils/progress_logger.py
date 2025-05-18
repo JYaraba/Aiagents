@@ -1,4 +1,7 @@
-# aiagents/utils/progress_logger.py
-
-def log_step(agent_name: str, step_desc: str):
-    print(f"[{agent_name}] ➤ {step_desc}")
+def log_step(func):
+    def wrapper(*args, **kwargs):
+        print(f"Starting: {func.__name__}")
+        result = func(*args, **kwargs)
+        print(f"Completed: {func.__name__}")
+        return result
+    return wrapper
