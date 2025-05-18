@@ -1,33 +1,40 @@
-# backend/agents/memory_agent.py
+# aiagents/agents/memory_agent.py
 
-import json
-import os
-from .base_agent import BaseAgent
-from backend.utils.progress_tracker import track_progress_step
+from aiagents.base.base_agent import BaseAgent
+from aiagents.utils.memory_store import MemoryStore
+from aiagents.utils.logger import log_agent_activity
 
 class MemoryAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="MemoryAgent", role="Long-Term Memory Keeper")
-        self.memory_path = "output/memory.json"
-        os.makedirs("output", exist_ok=True)
+        super().__init__(
+            name="MemoryAgent",
+            role="Context Retention and Semantic Memory Handler",
+            goal="Store, retrieve, and manage agent memory to improve task continuity and learning."
+        )
+        self.memory_store = MemoryStore()
 
-        # Load existing memory or initialize empty
-        if os.path.exists(self.memory_path):
-            with open(self.memory_path, "r") as f:
-                self.memory = json.load(f)
+    @log_agent_activity
+    def execute(self, context: dict) -> dict:
+        """Store relevant context and retrieve past data for assistance."""
+        key = context.get("key")
+        value = context.get("value")
+        action = context.get("action")
+
+        if action == "store":
+            self.memory_store.store(key, value)
+            return {"status": "stored", "key": key}
+
+        elif action == "retrieve":
+            result = self.memory_store.retrieve(key)
+            return {"status": "retrieved", "key": key, "value": result}
+
+        elif action == "delete":
+            self.memory_store.delete(key)
+            return {"status": "deleted", "key": key}
+
+        elif action == "list_keys":
+            keys = self.memory_store.list_keys()
+            return {"status": "listed", "keys": keys}
+
         else:
-            self.memory = {}
-
-    @track_progress_step("MemoryAgent", "Saving new memory entry")
-    def remember(self, key: str, value):
-        self.memory[key] = value
-        with open(self.memory_path, "w") as f:
-            json.dump(self.memory, f, indent=2)
-
-    @track_progress_step("MemoryAgent", "Retrieving memory entry")
-    def recall(self, key: str):
-        return self.memory.get(key, None)
-
-    @track_progress_step("MemoryAgent", "Listing all memory keys")
-    def list_keys(self):
-        return list(self.memory.keys())
+            return {"status": "error", "message": "Unknown action"}

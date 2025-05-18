@@ -1,30 +1,42 @@
-# backend/agents/packager_agent.py
-
 import os
-import zipfile
-from .base_agent import BaseAgent
-from backend.utils.progress_tracker import track_progress_step
+import shutil
+from zipfile import ZipFile
+
+from aiagents.base.base_agent import BaseAgent
+from aiagents.utils.progress_logger import log_step
+
 
 class PackagerAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="PackagerAgent", role="Application Packager")
+        super().__init__(
+            name="PackagerAgent",
+            role="Application Packager",
+            goal="Bundle the generated application files into a downloadable zip archive."
+        )
 
-    @track_progress_step("PackagerAgent", "Packaging build output")
-    def execute(self, task_list: list[str]) -> dict:
-        """
-        task_list is unused for now; future: allow packaging config
-        Returns: path to zipped package
-        """
-        output_dir = "output_projects"
-        zip_path = "output/package.zip"
-        os.makedirs("output", exist_ok=True)
+    @log_step("PackagerAgent", "Packaging build output")
+    def execute(self, context: dict) -> dict:
+        output_folder = context.get("output_folder", "output_projects")
+        package_output_path = "output/package.zip"
 
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for root, _, files in os.walk(output_dir):
+        if not os.path.exists("output"):
+            os.makedirs("output")
+
+        # Clean previous archive if any
+        if os.path.exists(package_output_path):
+            os.remove(package_output_path)
+
+        # Zip the directory recursively
+        with ZipFile(package_output_path, 'w') as zipf:
+            for root, _, files in os.walk(output_folder):
                 for file in files:
-                    abs_path = os.path.join(root, file)
-                    rel_path = os.path.relpath(abs_path, output_dir)
-                    zipf.write(abs_path, arcname=rel_path)
+                    full_path = os.path.join(root, file)
+                    relative_path = os.path.relpath(full_path, output_folder)
+                    zipf.write(full_path, arcname=relative_path)
 
-        self.remember("last_package_path", zip_path)
-        return {"zip_path": zip_path}
+        self.remember("package_path", package_output_path)
+
+        return {
+            "package_path": package_output_path,
+            "message": f"Project packaged successfully at {package_output_path}"
+        }

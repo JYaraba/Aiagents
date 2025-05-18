@@ -1,43 +1,67 @@
-# backend/agents/planner_agent.py
+from aiagents.base.base_agent import BaseAgent
+from aiagents.utils.progress_logger import log_step
 
-from .base_agent import BaseAgent
-from backend.utils.progress_tracker import track_progress_step
-from openai import OpenAI
-from backend.config import settings
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
 
 class PlannerAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="PlannerAgent", role="Task Planner")
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-
-    @track_progress_step("PlannerAgent", "Planning execution steps")
-    def execute(self, user_goal: str) -> list[str]:
-        """
-        user_goal: High-level objective (e.g., 'Build a login page')
-        Returns: List of actionable steps to be executed by other agents
-        """
-
-        planning_prompt = (
-            "You are a project planner AI. Break down the following high-level goal "
-            "into clear, actionable software development steps that can be executed by AI developer agents.\n\n"
-            f"Goal: {user_goal}\n\n"
-            "List the steps as clear bullet points."
+        super().__init__(
+            name="PlannerAgent",
+            role="Execution Planner",
+            goal="Break down the project into tasks and assign them to the right agents."
         )
 
-        response = self.client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a senior software planner."},
-                {"role": "user", "content": planning_prompt}
+    @log_step("PlannerAgent", "Planning execution steps")
+    def execute(self, prompt: str) -> dict:
+        # Retrieve architecture from memory (set by ArchitectAgent)
+        architecture = self.recall("architecture")
+        if not architecture:
+            raise ValueError("No architecture found in memory. ArchitectAgent must run first.")
+
+        tasks = []
+
+        # High-level steps (simulated for now)
+        tasks.extend([
+            "Analyze user prompt and finalize tech stack",
+            "Generate folder structure",
+            "Generate frontend components: LoginForm, RegistrationForm, Dashboard, App.js, index.js",
+            "Generate backend: User model, controller, routes, server setup",
+            "Design UI layout and styling for pages",
+            "Write tests for backend and frontend",
+            "Fix any code errors detected during testing",
+            "Generate preview and documentation",
+            "Package the final app into a downloadable format"
+        ])
+
+        categorized_tasks = {
+            "Prompt Engineer": ["Generate custom prompts per role based on the task"],
+            "Frontend Developer": [
+                "Build LoginForm, RegistrationForm, Dashboard components",
+                "Set up App.js and routing"
             ],
-            temperature=0.4
-        )
+            "Backend Developer": [
+                "Create server.js, routes/userRoutes.js, controllers/userController.js",
+                "Connect to MongoDB and configure Express"
+            ],
+            "UI/UX Designer": [
+                "Design user interface layout and flow",
+                "Define styling for all frontend components"
+            ],
+            "Tester": [
+                "Run syntax and integration tests",
+                "Validate backend API responses"
+            ],
+            "Bug Fixer": [
+                "Fix syntax or runtime issues reported by TesterAgent"
+            ],
+            "Packager": [
+                "Create a zipped folder of the build output",
+                "Generate preview.html or README.md for final review"
+            ],
+            "Full Stack Integrator": [
+                "Ensure all generated code files connect properly",
+                "Render a working end-to-end app with backend + frontend"
+            ]
+        }
 
-        plan_raw = response.choices[0].message.content.strip()
-        steps = [line.strip("-• ") for line in plan_raw.splitlines() if line.strip()]
-        self.remember("last_plan", steps)
-        return steps
+        self.remember("tasks", categorized_tasks)
+        return categorized_tasks

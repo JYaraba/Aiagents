@@ -1,74 +1,41 @@
-# backend/agents/agent_coordinator.py
+# aiagents/agents/prompt_engineer_agent.py
 
-from backend.agents.base_agent import BaseAgent
-from backend.utils.progress_tracker import log_progress_step
-from typing import Union
-from backend.agents.architect_agent import ArchitectAgent
-from backend.agents.planner_agent import PlannerAgent
-from backend.agents.prompt_engineer_agent import PromptEngineerAgent
-from backend.agents.frontend_developer_agent import FrontendDeveloperAgent
-from backend.agents.nodejs_developer_agent import NodeJsDeveloperAgent
-from backend.agents.ux_designer_agent import UXDesignerAgent
-from backend.agents.fullstack_integrator_agent import FullStackIntegratorAgent
-from backend.agents.tester_agent import TesterAgent
-from backend.agents.bug_fixer_agent import BugFixerAgent
-from backend.agents.packager_agent import PackagerAgent
-
-from backend.utils.progress_tracker import track_progress_step
-from backend.utils.file_writer import write_preview_file
+from aiagents.base.base_agent import BaseAgent
+from crewai import Task
+from typing import List, Dict
 
 
-@track_progress_step("AgentCoordinator", "Planning and building project")
-def plan_and_build(prompt: str) -> dict:
-    # 1. Analyze architecture
-    architect = ArchitectAgent()
-    architecture = architect.execute(prompt)
+class PromptEngineerAgent(BaseAgent):
+    def __init__(self):
+        super().__init__(
+            name="PromptEngineerAgent",
+            role="Prompt Engineer",
+            goal="Refine and tailor developer tasks into clear, optimized prompts for each agent to execute.",
+            backstory=(
+                "You are a specialist in translating technical task descriptions into effective prompts. "
+                "You help ensure each developer or tester agent gets a clear, contextual instruction they can act on without ambiguity."
+            )
+        )
 
-    if not isinstance(architecture, dict) or "stack" not in architecture:
-        return {"error": "Failed to parse architect output"}
+    def run(self, task_list: List[Dict]) -> List[Dict]:
+        # Input: List of task dicts from PlannerAgent
+        # Output: Same list but with optimized prompt
+        prompt = (
+            f"Refine the following tasks into clear, detailed prompts suitable for AI developer/tester agents. "
+            f"Preserve the role and keep each task optimized for action:\n\n{task_list}\n\n"
+            f"Return a list of dictionaries with:\n"
+            f" - 'agent': role name\n"
+            f" - 'prompt': engineered prompt for the agent\n"
+        )
 
-    # 2. Generate execution tasks
-    planner = PlannerAgent()
-    tasks = planner.execute(prompt)
+        task = Task(
+            description=prompt,
+            agent=self.agent
+        )
 
-    # 3. Generate engineered prompt
-    prompt_engineer = PromptEngineerAgent()
-    engineered_prompt = prompt_engineer.execute(prompt)
+        result = task.execute()
 
-    # 4. Frontend code generation
-    frontend_agent = FrontendDeveloperAgent()
-    frontend_result = frontend_agent.execute(engineered_prompt)
-
-    # 5. Backend code generation
-    backend_agent = NodeJsDeveloperAgent()
-    backend_result = backend_agent.execute(engineered_prompt)
-
-    # ✅ 6. Generate preview HTML after backend generation
-    write_preview_file("preview.html", title="App Preview", body="The application frontend has been successfully generated.")
-
-    # 7. UX Design
-    ux_agent = UXDesignerAgent()
-    ux_result = ux_agent.execute(prompt)
-
-    # 8. Integrate full stack
-    integrator = FullStackIntegratorAgent()
-    integration_result = integrator.execute(prompt)
-
-    # 9. Run tests
-    tester = TesterAgent()
-    test_results = tester.execute([])
-
-    # 10. Fix bugs if found
-    bugfixer = BugFixerAgent()
-    bugfix_result = bugfixer.execute(test_results)
-
-    # 11. Package output
-    packager = PackagerAgent()
-    package_result = packager.execute(prompt)
-
-    return {
-        "architecture": architecture,
-        "tasks": tasks,
-        "test_results": test_results,
-        "package_path": package_result.get("package_path")
-    }
+        try:
+            return eval(result)  # Safe fallback; will replace with json.loads() after dry run validation
+        except Exception as e:
+            return [{"error": f"Failed to parse prompt engineering output: {str(e)}"}]

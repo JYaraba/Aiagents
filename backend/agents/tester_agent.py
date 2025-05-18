@@ -1,30 +1,42 @@
-# backend/agents/tester_agent.py
-
+from aiagents.base.base_agent import BaseAgent
+from aiagents.utils.file_loader import load_project_files
+from aiagents.utils.progress_logger import log_step
 import ast
-from typing import List
-from .base_agent import BaseAgent
-from backend.utils.progress_tracker import track_progress_step
-from backend.utils.file_writer import load_python_files
+
 
 class TesterAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="TesterAgent", role="Functionality Validator")
+        super().__init__(
+            name="TesterAgent",
+            role="QA Tester",
+            goal="Ensure all generated files are free from syntax errors and basic issues before packaging."
+        )
 
-    @track_progress_step("TesterAgent", "Tester Agent is executing")
-    def execute(self, task_list: List[str]) -> dict:
-        """
-        task_list is not used currently; future-proofing for test-specific instructions
-        Returns: Dict with test_results (list of syntax status messages)
-        """
+    @log_step("TesterAgent is executing test pass")
+    def execute(self, inputs: dict) -> dict:
+        # Load all output project files
+        file_map = load_project_files("output")
+
         test_results = []
-        files_to_test = load_python_files("output_projects")
+        issues_detected = False
 
-        for file_path, content in files_to_test.items():
-            try:
-                ast.parse(content)
-                test_results.append(f"{file_path}: ✅ Syntax OK")
-            except SyntaxError as e:
-                test_results.append(f"{file_path}: ❌ Syntax Error - {e} (<unknown>, line {e.lineno})")
+        for file_path, content in file_map.items():
+            if file_path.endswith(".js") or file_path.endswith(".json") or file_path.endswith(".html"):
+                # For non-Python files, we can do lightweight lint checks in future
+                continue
+
+            if file_path.endswith(".py"):
+                try:
+                    ast.parse(content)
+                    test_results.append(f"{file_path}: ✅ Syntax OK")
+                except SyntaxError as e:
+                    issues_detected = True
+                    test_results.append(f"{file_path}: ❌ Syntax Error - {e}")
+
+        output = {
+            "test_results": test_results,
+            "issues_found": issues_detected
+        }
 
         self.remember("test_results", test_results)
-        return {"test_results": test_results}
+        return output

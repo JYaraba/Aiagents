@@ -1,71 +1,62 @@
-# backend/agents/agent_coordinator.py
-
-from backend.agents.architect_agent import ArchitectAgent
-from backend.agents.planner_agent import PlannerAgent
-from backend.agents.frontend_developer_agent import FrontendDeveloperAgent
-from backend.agents.nodejs_developer_agent import NodeJsDeveloperAgent
-from backend.agents.ux_designer_agent import UXDesignerAgent
-from backend.agents.fullstack_integrator_agent import FullStackIntegratorAgent
-from backend.agents.tester_agent import TesterAgent
-from backend.agents.bug_fixer_agent import BugFixerAgent
-from backend.agents.packager_agent import PackagerAgent
-
-from backend.utils.progress_tracker import track_progress_step
+import json
+from aiagents.agents.architect_agent import ArchitectAgent
+from aiagents.agents.planner_agent import PlannerAgent
+from aiagents.agents.memory_agent import MemoryAgent
+from crew.task_router import route_task
 from backend.utils.file_writer import write_preview_file
+from backend.utils.test_runner import run_code_tests
+from backend.utils.progress_tracker import log_progress_step
 
 
-@track_progress_step("AgentCoordinator", "Planning and building project")
-def plan_and_build(prompt: str) -> dict:
-    # Step 1: Analyze architecture
+@log_progress_step("AgentCoordinator", "Planning and building project")
+def plan_and_build(app_prompt: str) -> dict:
+    # Phase 1: Architecture & Planning
     architect = ArchitectAgent()
-    architecture = architect.execute(prompt)
+    architecture = architect.execute(app_prompt)
 
-    if not isinstance(architecture, dict) or "stack" not in architecture:
-        return {"error": "Failed to parse architect output"}
+    if not isinstance(architecture, dict):
+        raise ValueError("Invalid architecture format returned by ArchitectAgent.")
 
-    # Step 2: Generate project tasks
     planner = PlannerAgent()
-    tasks = planner.execute(prompt)
+    task_plan = planner.execute(app_prompt)
 
-    # Step 3: Use PromptEngineerAgent only inside this function to avoid circular import
-    from backend.agents.prompt_engineer_agent import PromptEngineerAgent
-    prompt_engineer = PromptEngineerAgent()
-    engineered_prompt = prompt_engineer.execute(prompt)
+    if not isinstance(task_plan, list):
+        raise ValueError("Invalid plan format returned by PlannerAgent.")
 
-    # Step 4: Frontend Developer builds UI
-    frontend_dev = FrontendDeveloperAgent()
-    frontend_result = frontend_dev.execute(engineered_prompt)
+    # Store memory for reference
+    memory = MemoryAgent()
+    memory.store("architecture", architecture)
+    memory.store("task_plan", task_plan)
 
-    # Step 5: Backend Developer builds server logic
-    backend_dev = NodeJsDeveloperAgent()
-    backend_result = backend_dev.execute(engineered_prompt)
+    # Phase 2: Dynamic Task Execution
+    task_outputs = []
+    for task in task_plan:
+        agent_name = task.get("agent")
+        task_description = task.get("task")
 
-    # ✅ Step 6: Generate preview.html after backend is done
-    write_preview_file("preview.html", title="App Preview", body="The application frontend has been successfully generated.")
+        if not agent_name or not task_description:
+            continue
 
-    # Step 7: UX Designer creates layout enhancements
-    ux_agent = UXDesignerAgent()
-    ux_result = ux_agent.execute(prompt)
+        try:
+            output = route_task(agent_name, task_description)
+            task_outputs.append({"agent": agent_name, "task": task_description, "output": output})
+        except Exception as e:
+            task_outputs.append({"agent": agent_name, "task": task_description, "error": str(e)})
 
-    # Step 8: Full Stack Integrator merges everything
-    integrator = FullStackIntegratorAgent()
-    integration_result = integrator.execute(prompt)
+    # Phase 3: Testing
+    test_results = run_code_tests()
+    memory.store("test_results", test_results)
 
-    # Step 9: Tester Agent validates generated files
-    tester = TesterAgent()
-    test_result = tester.execute([])
+    # Phase 4: Preview Generation (UI)
+    try:
+        write_preview_file()
+    except Exception as e:
+        task_outputs.append({"agent": "PreviewWriter", "task": "Generate preview.html", "error": str(e)})
 
-    # Step 10: Bug Fixer Agent applies quick fixes
-    bugfixer = BugFixerAgent()
-    bugfix_result = bugfixer.execute(test_result)
-
-    # Step 11: Packager Agent packages the build
-    packager = PackagerAgent()
-    package_result = packager.execute(prompt)
-
+    # Phase 5: Final Output
     return {
         "architecture": architecture,
-        "tasks": tasks,
-        "test_results": test_result,
-        "package_path": package_result.get("package_path")
+        "tasks": task_plan,
+        "outputs": task_outputs,
+        "test_results": test_results
     }

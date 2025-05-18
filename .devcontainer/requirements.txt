@@ -1,0 +1,34 @@
+# Core Frameworks
+fastapi==0.110.0
+uvicorn==0.29.0
+
+# LLM Integration
+openai==1.14.2
+
+# Agentic Orchestration
+crewai==0.29.0
+
+# File & Folder Utilities
+python-dotenv==1.0.1
+aiofiles==23.2.1
+
+# Data Parsing and Processing
+pydantic==2.6.4
+python-multipart==0.0.9
+tqdm==4.66.2
+
+# Memory / Embeddings (Optional but recommended)
+faiss-cpu==1.7.4
+langchain==0.1.14
+
+# Developer Convenience
+watchfiles==0.21.0
+
+# Testing (Optional but helpful)
+pytest==8.1.1
+
+# Others (used by CrewAI or support tooling)
+tenacity==8.2.3
+typing-extensions==4.11.0
+fastapi
+uvicorn[standard]

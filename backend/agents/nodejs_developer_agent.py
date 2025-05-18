@@ -1,45 +1,29 @@
-# backend/agents/nodejs_developer_agent.py
-
-from .base_agent import BaseAgent
-from backend.utils.progress_tracker import track_progress_step
-from backend.utils.file_writer import write_code_to_project_structure
-
+from aiagents.base.base_agent import BaseAgent
+from aiagents.utils.logging_utils import log_agent_step
+from aiagents.utils.file_writer import write_code_to_file
+from aiagents.utils.llm_connector import call_llm
 
 class NodeJsDeveloperAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="NodeJsDeveloperAgent", role="Node.js Backend Developer")
+        super().__init__(name="NodeJsDeveloperAgent", role="Backend Developer (Node.js)")
 
-    @track_progress_step("NodeJsDeveloperAgent", "Generating Node.js code")
-    def execute(self, prompt: str) -> dict:
-        # For now, assume prompt is already backend-specific
-        file_map = {
-            "create express server": "server.js",
-            "define user model": "models/User.js",
-            "create user routes": "routes/users.js",
-        }
+    @log_agent_step("NodeJsDeveloperAgent", "Generating backend code in Node.js")
+    def execute(self, task: dict) -> dict:
+        """
+        Generates Node.js backend code based on task input and writes it to appropriate files.
+        """
+        try:
+            prompt = task.get("prompt", "")
+            files_to_generate = task.get("files", {})
+            written_files = []
 
-        generated_files = {}
+            for file_path, description in files_to_generate.items():
+                full_prompt = f"{prompt}\n\nGenerate Node.js backend code for: {description}"
+                code = call_llm(full_prompt)
+                write_code_to_file(file_path, code)
+                written_files.append(file_path)
 
-        for desc, filename in file_map.items():
-            if desc in prompt.lower():
-                code = self.generate_code_block(prompt + f" — generate {filename}")
-                output_path = f"output_projects/{filename}"
-                write_code_to_project_structure({filename: code}, "output_projects")
-                generated_files[filename] = code
+            return {"status": "success", "files_created": written_files}
 
-        return generated_files
-
-    def generate_code_block(self, prompt: str) -> str:
-        system_prompt = (
-            "You are a senior Node.js developer. Generate clean Express.js code with proper imports and exports. "
-            "Only return code — no explanation."
-        )
-        response = self.llm.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.2
-        )
-        return response.choices[0].message.content.strip()
+        except Exception as e:
+            return {"status": "error", "message": str(e)}

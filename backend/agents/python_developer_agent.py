@@ -1,37 +1,29 @@
-# backend/agents/python_developer_agent.py
-
-from .base_agent import BaseAgent
-from backend.utils.progress_tracker import track_progress_step
-from openai import OpenAI
-from backend.config import settings
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
+from aiagents.base.base_agent import BaseAgent
+from aiagents.utils.logging_utils import log_agent_step
+from aiagents.utils.file_writer import write_code_to_file
+from aiagents.utils.llm_connector import call_llm
 
 class PythonDeveloperAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="PythonDeveloperAgent", role="Backend Developer")
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        super().__init__(name="PythonDeveloperAgent", role="Backend Developer (Python)")
 
-    @track_progress_step("PythonDeveloperAgent", "Generating Python code")
-    def execute(self, task_prompt: str) -> dict:
+    @log_agent_step("PythonDeveloperAgent", "Generating backend code in Python")
+    def execute(self, task: dict) -> dict:
         """
-        task_prompt: A clean, structured prompt from PromptEngineerAgent
+        Generates Python backend code based on provided task and saves it to specified files.
         """
+        try:
+            prompt = task.get("prompt", "")
+            files_to_generate = task.get("files", {})
+            written_files = []
 
-        response = self.client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a professional Python backend developer."},
-                {"role": "user", "content": task_prompt}
-            ],
-            temperature=0.3
-        )
+            for file_path, description in files_to_generate.items():
+                full_prompt = f"{prompt}\n\nGenerate Python backend code for: {description}"
+                code = call_llm(full_prompt)
+                write_code_to_file(file_path, code)
+                written_files.append(file_path)
 
-        code = response.choices[0].message.content.strip()
+            return {"status": "success", "files_created": written_files}
 
-        # Default file target is main.py, can be customized later
-        files = {"main.py": code}
-        self.remember("last_code", files)
-        return files
+        except Exception as e:
+            return {"status": "error", "message": str(e)}

@@ -1,42 +1,47 @@
-# backend/agents/fullstack_integrator_agent.py
+# aiagents/agents/fullstack_integrator_agent.py
 
-from .base_agent import BaseAgent
-from backend.utils.progress_tracker import track_progress_step
+from aiagents.base.base_agent import BaseAgent
 from backend.utils.file_writer import write_code_file
-from openai import OpenAI
-from backend.config import settings
-from dotenv import load_dotenv
-import os
+from backend.utils.path_utils import resolve_output_path
+from crewai import Task
 
-load_dotenv()
 
 class FullStackIntegratorAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="FullStackIntegratorAgent", role="Integration Specialist")
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
-
-    @track_progress_step("FullStackIntegratorAgent", "Connecting frontend and backend")
-    def execute(self, prompt: str) -> dict:
-        """
-        prompt: Integration-focused prompt from PromptEngineerAgent
-        Returns: Dict of filenames and generated glue code
-        """
-
-        response = self.client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a senior full-stack developer. Connect frontend components with backend logic. Output just the glue code."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3
+        super().__init__(
+            name="FullStackIntegratorAgent",
+            role="Full Stack Integrator",
+            goal="Integrate frontend and backend components into a functional full-stack application.",
+            backstory=(
+                "You are a full stack integrator who ensures frontend and backend work seamlessly together. "
+                "You verify that the backend APIs are properly consumed by the frontend, environment configurations "
+                "are aligned, and you generate glue code or documentation to tie the entire stack together."
+            )
         )
 
-        glue_code = response.choices[0].message.content.strip()
+    def run(self, engineered_task: dict) -> dict:
+        agent_role = engineered_task.get("agent", "")
+        prompt = engineered_task.get("prompt", "")
 
-        # Derive target filename (improved handling can use metadata later)
-        filename = "client/src/api/integrated_component.js"
-        write_code_file(filename, glue_code)
+        if agent_role != self.name:
+            return {"skipped": True}
 
-        files = {filename: glue_code}
-        self.remember("last_integration", files)
-        return files
+        task = Task(
+            description=prompt,
+            agent=self.agent
+        )
+
+        result = task.execute()
+
+        # Save integration summary or generated code
+        filename = self._extract_filename(prompt) or "integration_notes.md"
+        file_path = resolve_output_path(filename)
+
+        write_code_file(file_path, result)
+
+        return {"file": file_path, "status": "integration complete"}
+
+    def _extract_filename(self, prompt: str) -> str:
+        import re
+        match = re.search(r"generate\s+([\w\-/]+(?:\.js|\.ts|\.md))", prompt)
+        return match.group(1) if match else None

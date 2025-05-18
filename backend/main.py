@@ -1,26 +1,29 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from backend.schemas.build_request import BuildRequest
-from backend.agents.agent_coordinator import plan_and_build
-from backend.utils.progress_tracker import log_progress_step
+from pydantic import BaseModel
+from aiagents.agents.agent_coordinator import AgentCoordinator
+from fastapi.responses import JSONResponse
 
 app = FastAPI()
 
+# Allow frontend access (adjust origins if needed)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],  # Replace with specific domain in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-@app.get("/")
-def read_root():
-    return FileResponse("index.html")
+# Request schema
+class BuildRequest(BaseModel):
+    prompt: str
 
 @app.post("/build")
-def plan_and_generate_code(request: BuildRequest):
-    log_progress_step("PlannerAgent", "Starting planning")
-    result = plan_and_build(request.prompt)
-    return result
+def build_application(request: BuildRequest):
+    try:
+        coordinator = AgentCoordinator()
+        result = coordinator.run(prompt=request.prompt)
+        return JSONResponse(content=result)
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})

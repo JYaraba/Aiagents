@@ -1,27 +1,19 @@
 import datetime
 import functools
-import inspect
-from functools import wraps
-from datetime import datetime
-from typing import Any, Optional
 
-def log_progress_step(agent_name: str, message: str, extra: Optional[Any] = None):
-    print(f"[{agent_name}] {message}")
-    if extra is not None:
-        print(f"[{agent_name} DATA] {extra}")
 
-def track_progress_step(agent: str, progress: str):
+def log_progress_step(agent_name: str, step_description: str):
     """
-    Decorator to automatically log before and after executing a function.
+    Decorator to log agent progress in a standardized format.
     """
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            log_progress_step(agent, progress)
+            start_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{start_time}] ▶️ [{agent_name}] START: {step_description}")
             result = func(*args, **kwargs)
-            log_progress_step(agent, f"{progress} - Completed")
+            end_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            print(f"[{end_time}] ✅ [{agent_name}] DONE: {step_description}")
             return result
         return wrapper
     return decorator
-
-
