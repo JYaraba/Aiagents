@@ -1,27 +1,32 @@
+# aiagents/utils/file_parser.py
+
 import os
-from typing import Dict
+from typing import List
 
-
-def read_file(file_path: str) -> str:
-    """Read a file and return its content."""
-    if not os.path.isfile(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
-    with open(file_path, "r", encoding="utf-8") as f:
-        return f.read()
-
-
-def read_all_files_in_directory(directory_path: str, extensions: tuple = (".py", ".js", ".html")) -> Dict[str, str]:
-    """
-    Recursively read all files with given extensions from a directory and return a mapping of file paths to content.
-    """
-    file_map = {}
-    for root, _, files in os.walk(directory_path):
+def find_python_files(directory: str) -> List[str]:
+    """Recursively find all Python files in a directory."""
+    py_files = []
+    for root, _, files in os.walk(directory):
         for file in files:
-            if file.endswith(extensions):
-                full_path = os.path.join(root, file)
-                try:
-                    content = read_file(full_path)
-                    file_map[full_path] = content
-                except Exception as e:
-                    print(f"Error reading {full_path}: {e}")
-    return file_map
+            if file.endswith(".py"):
+                py_files.append(os.path.join(root, file))
+    return py_files
+
+def extract_code_blocks(file_path: str) -> List[str]:
+    """Extract blocks of code (functions/classes) from a Python file."""
+    with open(file_path, "r") as f:
+        lines = f.readlines()
+
+    code_blocks = []
+    block = []
+    for line in lines:
+        if line.strip().startswith(("def ", "class ")):
+            if block:
+                code_blocks.append("".join(block))
+                block = []
+        block.append(line)
+
+    if block:
+        code_blocks.append("".join(block))
+
+    return code_blocks
