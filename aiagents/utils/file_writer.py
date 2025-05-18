@@ -1,37 +1,43 @@
+# aiagents/utils/file_writer.py
+
 import os
-from typing import Dict
+
+def write_react_file(component_name: str, content: str, output_dir: str = "output_projects/react-app/src/components"):
+    """
+    Write a React component file to the specified directory.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    filename = os.path.join(output_dir, f"{component_name}.jsx")
+
+    with open(filename, "w") as f:
+        f.write(content)
+
+    return filename
 
 
-def ensure_directory_exists(file_path: str) -> None:
-    """Ensure the directory for the given file path exists."""
+def write_code_file(file_path: str, content: str):
+    """
+    Write backend or general code to the specified file path.
+    """
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
-
-
-def write_text_file(file_path: str, content: str) -> None:
-    """Write text content to a file, overwriting if it exists."""
-    ensure_directory_exists(file_path)
-    with open(file_path, "w", encoding="utf-8") as f:
+    with open(file_path, "w") as f:
         f.write(content)
 
 
-def write_multiple_files(file_map: Dict[str, str]) -> None:
+def write_json_file(file_path: str, data: dict):
     """
-    Write multiple files from a dictionary of {path: content}.
+    Write JSON data to a file.
     """
-    for path, content in file_map.items():
-        try:
-            write_text_file(path, content)
-        except Exception as e:
-            print(f"Failed to write {path}: {e}")
+    import json
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, "w") as f:
+        json.dump(data, f, indent=4)
 
 
-def append_to_file(file_path: str, content: str) -> None:
-    """Append content to an existing file."""
-    ensure_directory_exists(file_path)
-    with open(file_path, "a", encoding="utf-8") as f:
+def write_python_file(file_path: str, content: str):
+    """
+    Write Python code to a file, ensuring proper folder structure.
+    """
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    with open(file_path, "w") as f:
         f.write(content)
-
-
-def file_exists(file_path: str) -> bool:
-    """Check if a file exists."""
-    return os.path.isfile(file_path)

@@ -4,6 +4,25 @@ from pathlib import Path
 from langchain.vectorstores import FAISS
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.docstore.document import Document
+from aiagents.crew.task_router import route_task
+from aiagents.agents.agent_coordinator import plan_and_build
+from aiagents.agents.memory_agent import MemoryAgent
+from aiagents.agents.architect_agent import ArchitectAgent
+from aiagents.agents.planner_agent import PlannerAgent
+from aiagents.agents.prompt_engineer_agent import PromptEngineerAgent
+from aiagents.agents.frontend_developer_agent import FrontendDeveloperAgent
+from aiagents.agents.backend_developer_agent import BackendDeveloperAgent
+from aiagents.agents.nodejs_developer_agent import NodeJsDeveloperAgent
+from aiagents.agents.python_developer_agent import PythonDeveloperAgent
+from aiagents.agents.uiux_designer_agent import UIUXDesignerAgent
+from aiagents.agents.fullstack_integrator_agent import FullStackIntegratorAgent
+from aiagents.agents.tester_agent import TesterAgent
+from aiagents.agents.bug_fixer_agent import BugFixerAgent
+from aiagents.agents.packager_agent import PackagerAgent
+from aiagents.agents.devops_agent import DevOpsAgent
+from aiagents.agents.manager_agent import ManagerAgent
+from aiagents.crew.task_router import route_task
+
 
 MEMORY_FOLDER = Path("aiagents/memory/")
 VECTOR_STORE_PATH = MEMORY_FOLDER / "vector_index"

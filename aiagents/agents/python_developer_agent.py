@@ -1,29 +1,42 @@
-from aiagents.base.base_agent import BaseAgent
-from aiagents.utils.logging_utils import log_agent_step
-from aiagents.utils.file_writer import write_code_to_file
-from aiagents.utils.llm_connector import call_llm
+import os
+from crewai_tools import FileReadTool, FileWriteTool
+from aiagents.utils.progress_tracker import log_progress_step
+from aiagents.agents.base_agent import BaseAgent
 
 class PythonDeveloperAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="PythonDeveloperAgent", role="Backend Developer (Python)")
+        super().__init__(
+            name="PythonDeveloperAgent",
+            role="Python Backend Developer",
+            goal="Generate Python-based backend services and utilities",
+            tools=[FileReadTool(), FileWriteTool()]
+        )
 
-    @log_agent_step("PythonDeveloperAgent", "Generating backend code in Python")
-    def execute(self, task: dict) -> dict:
+    @log_progress_step("PythonDeveloperAgent", "Creating Python backend structure")
+    def execute(self, task: str) -> dict:
         """
-        Generates Python backend code based on provided task and saves it to specified files.
+        Generates a basic FastAPI backend structure.
         """
-        try:
-            prompt = task.get("prompt", "")
-            files_to_generate = task.get("files", {})
-            written_files = []
+        project_root = os.path.join("aiagents", "output", "python_backend")
+        os.makedirs(project_root, exist_ok=True)
 
-            for file_path, description in files_to_generate.items():
-                full_prompt = f"{prompt}\n\nGenerate Python backend code for: {description}"
-                code = call_llm(full_prompt)
-                write_code_to_file(file_path, code)
-                written_files.append(file_path)
+        main_py_content = """\
+from fastapi import FastAPI
 
-            return {"status": "success", "files_created": written_files}
+app = FastAPI()
 
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
+@app.get("/")
+def read_root():
+    return {"message": "Hello from Python FastAPI backend!"}
+"""
+
+        requirements_txt = "fastapi\nuvicorn\n"
+
+        self.tools[1].write_file(os.path.join(project_root, "main.py"), main_py_content)
+        self.tools[1].write_file(os.path.join(project_root, "requirements.txt"), requirements_txt)
+
+        return {
+            "status": "Python FastAPI backend generated",
+            "files": ["main.py", "requirements.txt"],
+            "output_dir": project_root
+        }

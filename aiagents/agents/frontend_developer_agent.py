@@ -1,47 +1,57 @@
-# aiagents/agents/frontend_developer_agent.py
-
 from aiagents.base.base_agent import BaseAgent
-from crewai import Task
-from backend.utils.file_writer import write_code_file
-from backend.utils.path_utils import resolve_output_path
+from aiagents.utils.progress_tracker import log_progress_step
+from aiagents.utils.file_writer import write_react_file
 
 
 class FrontendDeveloperAgent(BaseAgent):
     def __init__(self):
-        super().__init__(
-            name="FrontendDeveloperAgent",
-            role="Frontend Developer",
-            goal="Generate user interface code using modern frontend frameworks like React or Vue.",
-            backstory=(
-                "You are a frontend specialist responsible for implementing beautiful and functional UI "
-                "based on structured prompts. Your task is to turn descriptions and component specs into actual code."
-            )
-        )
+        super().__init__(name="FrontendDeveloperAgent", role="Frontend Code Generator")
 
-    def run(self, engineered_task: dict) -> dict:
-        agent_role = engineered_task.get("agent", "")
-        prompt = engineered_task.get("prompt", "")
+    @log_progress_step("FrontendDeveloperAgent", "Generating React frontend code")
+    def execute(self, prompt: str) -> dict:
+        """
+        Generates basic React.js frontend code from the prompt.
+        This agent focuses on generating App.jsx and one example component.
+        """
+        # Basic React layout
+        app_code = """\
+import React from 'react';
+import Header from './components/Header';
 
-        if agent_role != self.name:
-            return {"skipped": True}
+function App() {
+  return (
+    <div className="App">
+      <Header />
+      <h1>Welcome to the AI-generated App</h1>
+    </div>
+  );
+}
 
-        task = Task(
-            description=prompt,
-            agent=self.agent
-        )
+export default App;
+"""
 
-        result = task.execute()
+        header_code = """\
+import React from 'react';
 
-        # Optional: Extract filename from prompt or use convention
-        filename = self._extract_filename_from_prompt(prompt) or "App.js"
-        file_path = resolve_output_path(filename)
+function Header() {
+  return (
+    <header style={{ padding: '1rem', background: '#f5f5f5' }}>
+      <h2>Header Section</h2>
+    </header>
+  );
+}
 
-        write_code_file(file_path, result)
+export default Header;
+"""
 
-        return {"file": file_path, "status": "frontend code generated"}
+        # Define the output structure
+        files = {
+            "output/client/src/App.jsx": app_code,
+            "output/client/src/components/Header.jsx": header_code,
+        }
 
-    def _extract_filename_from_prompt(self, prompt: str) -> str:
-        # Look for something like 'generate LoginForm.js' in the prompt
-        import re
-        match = re.search(r"generate\s+([\w\-/]+\.js)", prompt)
-        return match.group(1) if match else None
+        for path, content in files.items():
+            write_react_file(path, content)
+
+        self.remember("frontend_files", list(files.keys()))
+        return {"generated_files": list(files.keys())}

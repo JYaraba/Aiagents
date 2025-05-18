@@ -1,29 +1,58 @@
-from aiagents.base.base_agent import BaseAgent
-from aiagents.utils.logging_utils import log_agent_step
-from aiagents.utils.file_writer import write_code_to_file
-from aiagents.utils.llm_connector import call_llm
+import os
+from crewai_tools import FileReadTool, FileWriteTool
+from aiagents.utils.progress_tracker import log_progress_step
+from aiagents.agents.base_agent import BaseAgent
 
 class NodeJsDeveloperAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="NodeJsDeveloperAgent", role="Backend Developer (Node.js)")
+        super().__init__(
+            name="NodeJsDeveloperAgent",
+            role="Backend Node.js Developer",
+            goal="Build Node.js backend components based on planning tasks",
+            tools=[FileReadTool(), FileWriteTool()]
+        )
 
-    @log_agent_step("NodeJsDeveloperAgent", "Generating backend code in Node.js")
-    def execute(self, task: dict) -> dict:
+    @log_progress_step("NodeJsDeveloperAgent", "Generating Node.js backend files")
+    def execute(self, task: str) -> dict:
         """
-        Generates Node.js backend code based on task input and writes it to appropriate files.
+        Generate a simple Node.js Express backend file structure and code.
         """
-        try:
-            prompt = task.get("prompt", "")
-            files_to_generate = task.get("files", {})
-            written_files = []
+        project_root = os.path.join("aiagents", "output", "nodejs_backend")
+        os.makedirs(project_root, exist_ok=True)
 
-            for file_path, description in files_to_generate.items():
-                full_prompt = f"{prompt}\n\nGenerate Node.js backend code for: {description}"
-                code = call_llm(full_prompt)
-                write_code_to_file(file_path, code)
-                written_files.append(file_path)
+        app_js_content = """\
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-            return {"status": "success", "files_created": written_files}
+app.use(express.json());
 
-        except Exception as e:
-            return {"status": "error", "message": str(e)}
+app.get('/', (req, res) => {
+  res.send('Hello from Node.js Backend!');
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+"""
+        package_json_content = """\
+{
+  "name": "aiagents-nodejs-backend",
+  "version": "1.0.0",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
+"""
+        self.tools[1].write_file(os.path.join(project_root, "app.js"), app_js_content)
+        self.tools[1].write_file(os.path.join(project_root, "package.json"), package_json_content)
+
+        return {
+            "status": "Node.js backend generated",
+            "files": ["app.js", "package.json"],
+            "output_dir": project_root
+        }

@@ -2,8 +2,8 @@
 
 from aiagents.base.base_agent import BaseAgent
 from crewai import Task
-from backend.utils.file_writer import write_code_file
-from backend.utils.path_utils import resolve_output_path
+from aiagents.utils.file_writer import write_code_file
+from aiagents.utils.path_utils import resolve_output_path
 
 
 class BackendDeveloperAgent(BaseAgent):

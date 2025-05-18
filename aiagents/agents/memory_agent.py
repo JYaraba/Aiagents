@@ -2,7 +2,8 @@
 
 from aiagents.base.base_agent import BaseAgent
 from aiagents.utils.memory_store import MemoryStore
-from aiagents.utils.logger import log_agent_activity
+from aiagents.utils.progress_logger import log_progress_step
+
 
 class MemoryAgent(BaseAgent):
     def __init__(self):
@@ -13,7 +14,7 @@ class MemoryAgent(BaseAgent):
         )
         self.memory_store = MemoryStore()
 
-    @log_agent_activity
+    @log_progress_step("MemoryAgent", "Memory Agent is executing")
     def execute(self, context: dict) -> dict:
         """Store relevant context and retrieve past data for assistance."""
         key = context.get("key")
