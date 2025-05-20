@@ -1,41 +1,27 @@
 from aiagents.base.base_agent import BaseAgent
 from aiagents.utils.progress_tracker import log_progress_step
-from aiagents.utils.file_writer import write_json_file
-
 
 class PlannerAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="PlannerAgent", role="Strategic Task Planner")
+        super().__init__(
+            name="PlannerAgent",
+            role="Planning Expert",
+            goal="Break down the app goal into actionable development tasks.",
+            backstory="You are a software planning expert skilled at analyzing user goals and converting them into structured engineering tasks."
+        )
 
-    @log_progress_step("PlannerAgent", "Planning execution steps")
-    def execute(self, prompt: str) -> dict:
-        """
-        Plans out the execution strategy based on the input prompt.
-        Returns a list of tasks and updates tasks.json.
-        """
-        planned_tasks = [
-            {
-                "agent": "UXDesignerAgent",
-                "task": "Design a clean, intuitive user interface for the app described in the prompt."
-            },
-            {
-                "agent": "PythonDeveloperAgent",
-                "task": "Implement backend logic for user authentication and data management."
-            },
-            {
-                "agent": "FrontendDeveloperAgent",
-                "task": "Develop frontend components based on the UI design and connect to backend."
-            },
-            {
-                "agent": "BugFixerAgent",
-                "task": "Test the entire application and fix any bugs or inconsistencies."
-            },
-            {
-                "agent": "FullStackIntegratorAgent",
-                "task": "Integrate frontend and backend into a deployable application structure."
-            }
+    @log_progress_step("PlannerAgent", "Planning and task breakdown")
+    def execute(self, task_data):
+        if isinstance(task_data, str):
+            app_goal = task_data
+        elif isinstance(task_data, dict):
+            app_goal = task_data.get("app_goal", "Build a generic multi-agent application.")
+        else:
+            raise ValueError("Unsupported input type for PlannerAgent.execute")
+
+        return [
+            {"id": 1, "description": f"Analyze goal: {app_goal}"},
+            {"id": 2, "description": "Design frontend layout"},
+            {"id": 3, "description": "Generate backend Flask code"},
+            {"id": 4, "description": "Integrate HTML, JS with Flask"},
         ]
-
-        self.remember("planned_tasks", planned_tasks)
-        write_json_file("output/tasks.json", planned_tasks)
-        return {"tasks": planned_tasks}

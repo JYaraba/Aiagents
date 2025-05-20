@@ -1,57 +1,29 @@
 from aiagents.base.base_agent import BaseAgent
 from aiagents.utils.progress_tracker import log_progress_step
-from aiagents.utils.file_writer import write_react_file
-
+from aiagents.utils.file_writer import write_output_file
 
 class FrontendDeveloperAgent(BaseAgent):
     def __init__(self):
-        super().__init__(name="FrontendDeveloperAgent", role="Frontend Code Generator")
+        super().__init__(
+            name="FrontendDeveloperAgent",
+            role="Frontend Developer",
+            goal="Build beautiful and functional user interfaces.",
+            backstory=(
+                "You specialize in developing responsive and engaging user interfaces using HTML, CSS, and JavaScript frameworks. "
+                "You ensure frontend components align with the UI/UX plan."
+            )
+        )
 
-    @log_progress_step("FrontendDeveloperAgent", "Generating React frontend code")
-    def execute(self, prompt: str) -> dict:
-        """
-        Generates basic React.js frontend code from the prompt.
-        This agent focuses on generating App.jsx and one example component.
-        """
-        # Basic React layout
-        app_code = """\
-import React from 'react';
-import Header from './components/Header';
+    @log_progress_step("FrontendDeveloperAgent", "Generating frontend components")
+    def execute(self, task_data: dict) -> dict:
+        html_content = "<!DOCTYPE html>\n<html>\n<head><title>To-Do App</title></head>\n<body>\n<h1>My To-Do List</h1>\n<ul id='tasks'></ul>\n<script src='app.js'></script>\n</body>\n</html>"
+        js_content = "const tasks = ['Learn Python', 'Build a web app'];\nconst list = document.getElementById('tasks');\ntasks.forEach(task => { const li = document.createElement('li'); li.textContent = task; list.appendChild(li); });"
 
-function App() {
-  return (
-    <div className="App">
-      <Header />
-      <h1>Welcome to the AI-generated App</h1>
-    </div>
-  );
-}
+        write_output_file("output_projects/frontend/index.html", html_content)
+        write_output_file("output_projects/frontend/app.js", js_content)
 
-export default App;
-"""
-
-        header_code = """\
-import React from 'react';
-
-function Header() {
-  return (
-    <header style={{ padding: '1rem', background: '#f5f5f5' }}>
-      <h2>Header Section</h2>
-    </header>
-  );
-}
-
-export default Header;
-"""
-
-        # Define the output structure
-        files = {
-            "output/client/src/App.jsx": app_code,
-            "output/client/src/components/Header.jsx": header_code,
+        return {
+            "status": "executed",
+            "agent": self.name,
+            "details": "Frontend HTML and JS files generated."
         }
-
-        for path, content in files.items():
-            write_react_file(path, content)
-
-        self.remember("frontend_files", list(files.keys()))
-        return {"generated_files": list(files.keys())}

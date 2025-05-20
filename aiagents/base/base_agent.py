@@ -1,9 +1,10 @@
-from crewai import Agent
+from pydantic import BaseModel
 
-class BaseAgent(Agent):
-    def __init__(self, name: str, role: str, goal: str):
-        super().__init__(
-            name=name,
-            role=role,
-            goal=goal,
-        )
+class BaseAgent(BaseModel):
+    name: str
+    role: str
+    goal: str
+    backstory: str
+
+    def remember(self, key: str, value):
+        print(f"[Memory Placeholder] {self.name} remembers {key} = {value}")

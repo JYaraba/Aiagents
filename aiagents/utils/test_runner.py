@@ -1,5 +1,6 @@
 import ast
 import os
+import subprocess
 from typing import List, Tuple
 
 
@@ -44,4 +45,21 @@ def run_basic_syntax_tests(directory: str) -> List[str]:
             results.append(f"{path}: ✅ Syntax OK")
         else:
             results.append(f"{path}: ❌ Syntax Error - {error}")
+    return results
+
+def run_code_tests(output_dir="output_projects"):
+    """
+    Run code syntax checks or test scripts for all files in the output directory.
+    This is a placeholder function that runs `python -m py_compile` on each file.
+    """
+    results = []
+    for root, _, files in os.walk(output_dir):
+        for file in files:
+            if file.endswith(".py"):
+                file_path = os.path.join(root, file)
+                try:
+                    subprocess.check_output(["python3", "-m", "py_compile", file_path], stderr=subprocess.STDOUT)
+                    results.append(f"{file_path}: ✅ Syntax OK")
+                except subprocess.CalledProcessError as e:
+                    results.append(f"{file_path}: ❌ Syntax Error - {e.output.decode().strip()}")
     return results

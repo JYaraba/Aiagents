@@ -1,3 +1,5 @@
+# aiagents/agents/architect_agent.py
+
 from aiagents.base.base_agent import BaseAgent
 from aiagents.utils.progress_tracker import log_progress_step
 
@@ -6,64 +8,33 @@ class ArchitectAgent(BaseAgent):
         super().__init__(
             name="ArchitectAgent",
             role="Solution Architect",
-            goal="Analyze the prompt and decide on the tech stack, folder structure, required agents, and base architecture plan."
+            goal="Design high-level system architecture and guide development planning.",
+            backstory=(
+                "You are a seasoned software architect. Your job is to understand the high-level goals of the project "
+                "and define the best architecture, technology stack, and integration patterns. "
+                "You collaborate closely with developers and planners to ensure scalability, performance, and maintainability."
+            )
         )
 
-    @log_progress_step("ArchitectAgent", "Analyzing app prompt and selecting tech stack")
-    def execute(self, prompt: str) -> dict:
-        architecture = {
-            "stack": {
-                "frontend": "React.js",
-                "backend": "Node.js, Express.js",
-                "database": "MongoDB",
-                "devops": "Docker, AWS",
-                "version_control": "Git"
-            },
-            "agents_needed": [
-                "Prompt Engineer",
-                "Frontend Developer",
-                "Backend Developer",
-                "UI/UX Designer",
-                "Tester",
-                "Bug Fixer",
-                "Packager",
-                "Full Stack Integrator"
-            ],
-            "folder_structure": {
-                "root": {
-                    "client": {
-                        "public": {},
-                        "src": {
-                            "components": {
-                                "LoginForm.js": {},
-                                "RegistrationForm.js": {},
-                                "Dashboard.js": {}
-                            },
-                            "App.js": {},
-                            "index.js": {}
-                        }
-                    },
-                    "server": {
-                        "routes": {
-                            "userRoutes.js": {}
-                        },
-                        "controllers": {
-                            "userController.js": {}
-                        },
-                        "models": {
-                            "User.js": {}
-                        },
-                        "server.js": {}
-                    }
-                }
-            },
-            "dependencies": {
-                "npm": {
-                    "client": ["react", "react-dom", "axios", "react-router-dom"],
-                    "server": ["express", "cors", "body-parser", "mongoose", "bcrypt", "jsonwebtoken"]
-                }
-            }
+    @log_progress_step("ArchitectAgent", "Creating high-level architecture")
+    def execute(self, task_data: list) -> dict:
+        # Convert list of task strings or dicts into a summarized description
+        if isinstance(task_data, list):
+            requirements = "\n".join(
+                [f"- {task}" if isinstance(task, str) else f"- {task.get('description', str(task))}" for task in task_data]
+            )
+        else:
+            requirements = str(task_data)
+
+        tech_stack = "Node.js for backend, React for frontend, FastAPI for APIs, PostgreSQL for database"
+        diagram = "Services → API Gateway → Backend (FastAPI/Node) → DB + Frontend (React)"
+
+        architecture_plan = {
+            "summary": "Designed modular and scalable architecture.",
+            "tech_stack": tech_stack,
+            "diagram": diagram,
+            "notes": f"Generated based on:\n{requirements}"
         }
 
-        self.remember("architecture", architecture)
-        return architecture
+        self.remember("architecture_plan", architecture_plan)
+        return architecture_plan

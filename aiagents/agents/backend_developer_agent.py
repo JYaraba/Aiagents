@@ -1,46 +1,45 @@
-# aiagents/agents/backend_developer_agent.py
-
 from aiagents.base.base_agent import BaseAgent
-from crewai import Task
-from aiagents.utils.file_writer import write_code_file
-from aiagents.utils.path_utils import resolve_output_path
+from aiagents.utils.file_writer import write_output_file
+from aiagents.utils.progress_tracker import log_progress_step
 
 
 class BackendDeveloperAgent(BaseAgent):
     def __init__(self):
         super().__init__(
             name="BackendDeveloperAgent",
-            role="Backend Developer",
-            goal="Build the backend application logic, including APIs, models, and configurations.",
-            backstory=(
-                "You are a backend expert. You take architectural blueprints and prompt-engineered "
-                "descriptions to build robust and scalable backend systems using technologies such as "
-                "Node.js, Express, Flask, Django, or Spring Boot."
-            )
+            role="Backend Engineer",
+            goal="Create backend APIs using Flask to support frontend operations",
+            backstory="Experienced in developing backend logic and RESTful APIs using Python and Flask.",
         )
 
-    def run(self, engineered_task: dict) -> dict:
-        agent_role = engineered_task.get("agent", "")
-        prompt = engineered_task.get("prompt", "")
+    @log_progress_step("BackendDeveloperAgent", "Generating backend logic")
+    def execute(self, task_data: list | dict) -> dict:
+        # Basic Flask API setup for a to-do list
+        flask_code = """from flask import Flask, request, jsonify
 
-        if agent_role != self.name:
-            return {"skipped": True}
+app = Flask(__name__)
 
-        task = Task(
-            description=prompt,
-            agent=self.agent
-        )
+todos = []
 
-        result = task.execute()
+@app.route('/todos', methods=['GET'])
+def get_todos():
+    return jsonify(todos)
 
-        filename = self._extract_filename_from_prompt(prompt) or "server.js"
-        file_path = resolve_output_path(filename)
+@app.route('/todos', methods=['POST'])
+def add_todo():
+    data = request.get_json()
+    todos.append(data['task'])
+    return jsonify({'status': 'Task added'}), 201
 
-        write_code_file(file_path, result)
+if __name__ == '__main__':
+    app.run(debug=True)
+"""
 
-        return {"file": file_path, "status": "backend code generated"}
+        # Write file
+        write_output_file("backend/app.py", flask_code)
 
-    def _extract_filename_from_prompt(self, prompt: str) -> str:
-        import re
-        match = re.search(r"generate\s+([\w\-/]+\.js)", prompt)
-        return match.group(1) if match else None
+        return {
+            "status": "executed",
+            "agent": self.name,
+            "details": "Backend file generated: app.py",
+        }

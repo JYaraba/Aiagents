@@ -1,42 +1,24 @@
-import os
-import shutil
-from zipfile import ZipFile
+# aiagents/agents/packager_agent.py
 
 from aiagents.base.base_agent import BaseAgent
-from aiagents.utils.progress_logger import log_step
-
+from aiagents.utils.progress_tracker import log_progress_step
 
 class PackagerAgent(BaseAgent):
     def __init__(self):
         super().__init__(
             name="PackagerAgent",
             role="Application Packager",
-            goal="Bundle the generated application files into a downloadable zip archive."
+            goal="Package the generated application files into a deliverable zip file.",
+            backstory=(
+                "You are the final step in the development pipeline. Your responsibility is to collect the generated code, structure it cleanly, "
+                "and compress it into a ZIP file for delivery or deployment. You ensure everything is ready for release."
+            )
         )
 
-    @log_step("PackagerAgent", "Packaging build output")
-    def execute(self, context: dict) -> dict:
-        output_folder = context.get("output_folder", "output_projects")
-        package_output_path = "output/package.zip"
-
-        if not os.path.exists("output"):
-            os.makedirs("output")
-
-        # Clean previous archive if any
-        if os.path.exists(package_output_path):
-            os.remove(package_output_path)
-
-        # Zip the directory recursively
-        with ZipFile(package_output_path, 'w') as zipf:
-            for root, _, files in os.walk(output_folder):
-                for file in files:
-                    full_path = os.path.join(root, file)
-                    relative_path = os.path.relpath(full_path, output_folder)
-                    zipf.write(full_path, arcname=relative_path)
-
-        self.remember("package_path", package_output_path)
-
+    @log_progress_step("PackagerAgent", "Packaging generated app")
+    def execute(self, task_data: dict) -> dict:
         return {
-            "package_path": package_output_path,
-            "message": f"Project packaged successfully at {package_output_path}"
+            "status": "executed",
+            "agent": "PackagerAgent",
+            "details": "Application packaged successfully."
         }

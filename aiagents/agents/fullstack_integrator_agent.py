@@ -1,9 +1,6 @@
-# aiagents/agents/fullstack_integrator_agent.py
-
 from aiagents.base.base_agent import BaseAgent
-from aiagents.utils.file_writer import write_code_file
-from aiagents.utils.path_utils import resolve_output_path
-from crewai import Task
+from aiagents.utils.file_writer import write_output_file
+from aiagents.utils.progress_tracker import log_progress_step
 
 
 class FullStackIntegratorAgent(BaseAgent):
@@ -11,37 +8,41 @@ class FullStackIntegratorAgent(BaseAgent):
         super().__init__(
             name="FullStackIntegratorAgent",
             role="Full Stack Integrator",
-            goal="Integrate frontend and backend components into a functional full-stack application.",
-            backstory=(
-                "You are a full stack integrator who ensures frontend and backend work seamlessly together. "
-                "You verify that the backend APIs are properly consumed by the frontend, environment configurations "
-                "are aligned, and you generate glue code or documentation to tie the entire stack together."
-            )
+            goal="Integrate frontend and backend into a cohesive runnable application",
+            backstory="Expert in gluing frontend and backend components, enabling a seamless development and runtime experience.",
         )
 
-    def run(self, engineered_task: dict) -> dict:
-        agent_role = engineered_task.get("agent", "")
-        prompt = engineered_task.get("prompt", "")
+    @log_progress_step("FullStackIntegratorAgent", "Integrating frontend and backend")
+    def execute(self, task_data: list | dict) -> dict:
+        integration_code = """from flask import Flask, request, jsonify, send_from_directory
+import os
 
-        if agent_role != self.name:
-            return {"skipped": True}
+app = Flask(__name__, static_folder='../frontend', static_url_path='')
 
-        task = Task(
-            description=prompt,
-            agent=self.agent
-        )
+todos = []
 
-        result = task.execute()
+@app.route('/')
+def serve_ui():
+    return send_from_directory(app.static_folder, 'index.html')
 
-        # Save integration summary or generated code
-        filename = self._extract_filename(prompt) or "integration_notes.md"
-        file_path = resolve_output_path(filename)
+@app.route('/todos', methods=['GET'])
+def get_todos():
+    return jsonify(todos)
 
-        write_code_file(file_path, result)
+@app.route('/todos', methods=['POST'])
+def add_todo():
+    data = request.get_json()
+    todos.append(data['task'])
+    return jsonify({'status': 'Task added'}), 201
 
-        return {"file": file_path, "status": "integration complete"}
+if __name__ == '__main__':
+    app.run(debug=True)
+"""
 
-    def _extract_filename(self, prompt: str) -> str:
-        import re
-        match = re.search(r"generate\s+([\w\-/]+(?:\.js|\.ts|\.md))", prompt)
-        return match.group(1) if match else None
+        write_output_file("server.py", integration_code)
+
+        return {
+            "status": "executed",
+            "agent": self.name,
+            "details": "Created integration entry point: server.py"
+        }

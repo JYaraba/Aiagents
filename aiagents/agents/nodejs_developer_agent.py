@@ -1,58 +1,68 @@
-import os
-from crewai_tools import FileReadTool, FileWriteTool
+from aiagents.base.base_agent import BaseAgent
+from aiagents.utils.file_writer import write_output_file
 from aiagents.utils.progress_tracker import log_progress_step
-from aiagents.agents.base_agent import BaseAgent
+
 
 class NodeJsDeveloperAgent(BaseAgent):
     def __init__(self):
         super().__init__(
             name="NodeJsDeveloperAgent",
-            role="Backend Node.js Developer",
-            goal="Build Node.js backend components based on planning tasks",
-            tools=[FileReadTool(), FileWriteTool()]
+            role="Node.js Backend Developer",
+            goal="Generate Node.js backend logic using Express",
+            backstory="Experienced Node.js engineer who builds robust REST APIs with Express and handles server-side tasks efficiently."
         )
 
-    @log_progress_step("NodeJsDeveloperAgent", "Generating Node.js backend files")
-    def execute(self, task: str) -> dict:
-        """
-        Generate a simple Node.js Express backend file structure and code.
-        """
-        project_root = os.path.join("aiagents", "output", "nodejs_backend")
-        os.makedirs(project_root, exist_ok=True)
+    @log_progress_step("NodeJsDeveloperAgent", "Generating Node.js backend")
+    def execute(self, task_data: list | dict) -> dict:
+        # Generate server.js with Express API
+        server_code = """const express = require('express');
+const bodyParser = require('body-parser');
 
-        app_js_content = """\
-const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(bodyParser.json());
 
-app.get('/', (req, res) => {
-  res.send('Hello from Node.js Backend!');
+let todos = [];
+
+app.get('/todos', (req, res) => {
+  res.json(todos);
+});
+
+app.post('/todos', (req, res) => {
+  const task = req.body.task;
+  if (task) {
+    todos.push(task);
+    res.status(201).json({ message: 'Task added.' });
+  } else {
+    res.status(400).json({ error: 'Task is required.' });
+  }
 });
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 """
-        package_json_content = """\
-{
-  "name": "aiagents-nodejs-backend",
+
+        package_json = """{
+  "name": "todo-node-api",
   "version": "1.0.0",
-  "main": "app.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.18.2"
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2"
   }
 }
 """
-        self.tools[1].write_file(os.path.join(project_root, "app.js"), app_js_content)
-        self.tools[1].write_file(os.path.join(project_root, "package.json"), package_json_content)
+
+        write_output_file("node_backend/server.js", server_code)
+        write_output_file("node_backend/package.json", package_json)
 
         return {
-            "status": "Node.js backend generated",
-            "files": ["app.js", "package.json"],
-            "output_dir": project_root
+            "status": "executed",
+            "agent": self.name,
+            "details": "Generated Node.js backend (Express) in node_backend/."
         }

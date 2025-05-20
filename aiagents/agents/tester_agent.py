@@ -1,42 +1,25 @@
-from aiagents.base.base_agent import BaseAgent
-from aiagents.utils.file_loader import load_project_files
-from aiagents.utils.progress_logger import log_step
-import ast
+# aiagents/agents/tester_agent.py
 
+from aiagents.base.base_agent import BaseAgent
+from aiagents.utils.progress_logger import log_step
+from aiagents.utils.test_runner import run_basic_syntax_tests
 
 class TesterAgent(BaseAgent):
     def __init__(self):
         super().__init__(
             name="TesterAgent",
-            role="QA Tester",
-            goal="Ensure all generated files are free from syntax errors and basic issues before packaging."
+            role="Functionality Validator",
+            goal="Ensure that generated code is syntactically correct and logically sound before it is finalized.",
+            backstory=(
+                "You are the quality assurance expert in the AI agent team. You rigorously test all output from developer agents to catch errors "
+                "early and maintain high reliability across the system. You validate correctness, structure, and readiness for deployment."
+            )
         )
 
-    @log_step("TesterAgent is executing test pass")
-    def execute(self, inputs: dict) -> dict:
-        # Load all output project files
-        file_map = load_project_files("output")
-
-        test_results = []
-        issues_detected = False
-
-        for file_path, content in file_map.items():
-            if file_path.endswith(".js") or file_path.endswith(".json") or file_path.endswith(".html"):
-                # For non-Python files, we can do lightweight lint checks in future
-                continue
-
-            if file_path.endswith(".py"):
-                try:
-                    ast.parse(content)
-                    test_results.append(f"{file_path}: ✅ Syntax OK")
-                except SyntaxError as e:
-                    issues_detected = True
-                    test_results.append(f"{file_path}: ❌ Syntax Error - {e}")
-
-        output = {
-            "test_results": test_results,
-            "issues_found": issues_detected
+    def execute(self, task_data: dict) -> dict:
+        log_step("TesterAgent", "Starting validation tests on output files")
+        result = run_basic_syntax_tests(directory="output_projects")
+        return {
+            "status": "complete",
+            "test_results": result
         }
-
-        self.remember("test_results", test_results)
-        return output

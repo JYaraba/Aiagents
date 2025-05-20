@@ -1,23 +1,27 @@
-# backend/main.py
-
-import sys
-import os
-
-# Dynamically add the root project folder to PYTHONPATH
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if ROOT_DIR not in sys.path:
-    sys.path.insert(0, ROOT_DIR)
-
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from aiagents.agents.agent_coordinator import AgentCoordinator
 
+# Initialize FastAPI app
 app = FastAPI()
+
+# Instantiate your agent coordinator
 coordinator = AgentCoordinator()
 
-class BuildRequest(BaseModel):
-    app_prompt: str
+# Request schema
+class PromptRequest(BaseModel):
+    prompt: str
 
-@app.post("/build")
-def build_app(request: BuildRequest):
-    return coordinator.run(request.app_prompt)
+# Health check endpoint
+@app.get("/")
+def read_root():
+    return {"status": "Aiagents backend is running!"}
+
+# Dry run execution endpoint
+@app.post("/run-dry")
+async def run_dry(request: PromptRequest):
+    try:
+        result = coordinator.run(prompt=request.prompt)
+        return {"result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

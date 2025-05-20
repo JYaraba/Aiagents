@@ -4,7 +4,6 @@ import datetime
 import os
 from functools import wraps
 
-
 def log_progress_step(agent_name: str, message: str):
     """
     Decorator to log the start and end of a function execution with a custom message.
@@ -26,5 +25,17 @@ def log_progress_step(agent_name: str, message: str):
             return result
 
         return wrapper
-
     return decorator
+
+
+def log_step(agent_name: str, step: str):
+    """
+    Logs a generic step message to the agent's log file.
+    """
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, f"{agent_name.lower()}_log.txt")
+
+    with open(log_file, "a") as f:
+        f.write(f"[{timestamp}] [{agent_name}] STEP: {step}\n")

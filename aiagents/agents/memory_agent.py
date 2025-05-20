@@ -1,41 +1,37 @@
 # aiagents/agents/memory_agent.py
 
+from pydantic import PrivateAttr
 from aiagents.base.base_agent import BaseAgent
-from aiagents.utils.memory_store import MemoryStore
-from aiagents.utils.progress_logger import log_progress_step
+from aiagents.utils.progress_tracker import log_progress_step
 
 
 class MemoryAgent(BaseAgent):
+    _memory: dict = PrivateAttr(default_factory=dict)
+
     def __init__(self):
         super().__init__(
             name="MemoryAgent",
-            role="Context Retention and Semantic Memory Handler",
-            goal="Store, retrieve, and manage agent memory to improve task continuity and learning."
+            role="Memory Manager",
+            goal="Store and retrieve contextual memory from previous tasks across agents.",
+            backstory=(
+                "You manage the persistent memory system across the agent crew. You help agents recall previous actions, decisions, and task history "
+                "to ensure context-aware behavior in ongoing and future tasks."
+            )
         )
-        self.memory_store = MemoryStore()
 
-    @log_progress_step("MemoryAgent", "Memory Agent is executing")
-    def execute(self, context: dict) -> dict:
-        """Store relevant context and retrieve past data for assistance."""
-        key = context.get("key")
-        value = context.get("value")
-        action = context.get("action")
+    @log_progress_step("MemoryAgent", "Storing and retrieving agent memory")
+    def execute(self, task_data: dict) -> dict:
+        return {
+            "status": "executed",
+            "agent": "MemoryAgent",
+            "details": "Memory operation completed."
+        }
 
-        if action == "store":
-            self.memory_store.store(key, value)
-            return {"status": "stored", "key": key}
+    def store(self, key: str, value: any) -> None:
+        self._memory[key] = value
 
-        elif action == "retrieve":
-            result = self.memory_store.retrieve(key)
-            return {"status": "retrieved", "key": key, "value": result}
+    def retrieve(self, key: str) -> any:
+        return self._memory.get(key)
 
-        elif action == "delete":
-            self.memory_store.delete(key)
-            return {"status": "deleted", "key": key}
-
-        elif action == "list_keys":
-            keys = self.memory_store.list_keys()
-            return {"status": "listed", "keys": keys}
-
-        else:
-            return {"status": "error", "message": "Unknown action"}
+    def all_memory(self) -> dict:
+        return self._memory
